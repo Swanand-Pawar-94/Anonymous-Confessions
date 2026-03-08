@@ -8,6 +8,11 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 5500;
 
+// 1. Tell Express where your static files (CSS, JS) are
+// We go up one level from Backend then into Frontend
+const frontendPath = path.join(__dirname, '..', 'Frontend');
+app.use(express.static(frontendPath)); 
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -20,7 +25,7 @@ app.use(express.static(path.join(__dirname, '../Frontend')));
 // GET all sticky notes
 app.get('/api/stickynotes', (req, res) => {
   db.all(
-    'SELECT * FROM stickynotes ORDER BY createdAt DESC',
+    'SELECT * FROM stickynotes',
     [],
     (err, rows) => {
       if (err) {
@@ -49,7 +54,7 @@ app.post('/api/stickynotes', (req, res) => {
 
   db.run(
     'INSERT INTO stickynotes (content, x, y, width, height, color, rotation, confessionId, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [content || '', x, y, finalWidth, finalHeight, finalColor, finalRotation, confessionId || null, timestamp],
+    [content || '', x, y, finalWidth, finalHeight, finalColor, finalRotation, this.confessionId || null, timestamp],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -64,7 +69,7 @@ app.post('/api/stickynotes', (req, res) => {
         height: finalHeight,
         color: finalColor,
         rotation: finalRotation,
-        confessionId: confessionId || null,
+        confessionId: this.confessionId || null,
         timestamp,
         createdAt: new Date().toISOString()
       });
@@ -75,19 +80,29 @@ app.post('/api/stickynotes', (req, res) => {
 // UPDATE sticky note
 app.put('/api/stickynotes/:id', (req, res) => {
   const { id } = req.params;
-  const { content, x, y, width, height, color, rotation, confessionId } = req.body;
-
-  db.run(
-    'UPDATE stickynotes SET content = ?, x = ?, y = ?, width = ?, height = ?, color = ?, rotation = ?, confessionId = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
-    [content || '', x || 0, y || 0, width || 250, height || 300, color || '#FFFF99', rotation || 0, confessionId || null, id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ message: 'Sticky note updated', id: parseInt(id) });
+  // Only allow updating specific fields
+  const allowedFields = ['content', 'x', 'y', 'width', 'height', 'color', 'rotation', 'confessionId'];
+  const updates = [];
+  const values = [];
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      updates.push(`${field} = ?`);
+      values.push(req.body[field]);
     }
-  );
+  }
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'No valid fields provided for update.' });
+  }
+  updates.push('updatedAt = CURRENT_TIMESTAMP');
+  const sql = `UPDATE stickynotes SET ${updates.join(', ')} WHERE id = ?`;
+  values.push(id);
+  db.run(sql, values, function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ message: 'Sticky note updated', id: parseInt(id) });
+  });
 });
 
 // DELETE sticky note (protected if confession exists)
@@ -130,6 +145,9 @@ app.delete('/api/stickynotes', (req, res) => {
 // ==================== STATS ====================
 
 // GET sticky notes count from last hour
+app.get('/history', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'history.html'));
+}); 
 app.get('/api/stickynotes/stats/last-hour', (req, res) => {
   const oneHourAgo = Date.now() - (60 * 60 * 1000);
 
@@ -151,7 +169,7 @@ app.get('/api/stickynotes/stats/last-hour', (req, res) => {
 // GET all confessions
 app.get('/api/confessions', (req, res) => {
   db.all(
-    'SELECT * FROM confessions ORDER BY createdAt DESC',
+    'SELECT * FROM confessions',
     [],
     (err, rows) => {
       if (err) {
