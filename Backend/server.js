@@ -7,6 +7,11 @@ const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 5500;
+console.log('=== CONFESSION WALL SERVER STARTED: UNIQUE123 ===');
+// Custom route to identify backend instance and port
+app.get('/api/whoami', (req, res) => {
+  res.json({ message: 'This is the REAL backend', port: PORT });
+});
 
 // 1. Tell Express where your static files (CSS, JS) are
 // We go up one level from Backend then into Frontend
@@ -105,6 +110,17 @@ app.put('/api/stickynotes/:id', (req, res) => {
   });
 });
 
+// DELETE all sticky notes
+app.delete('/api/stickynotes', (req, res) => {
+  db.run('DELETE FROM stickynotes', (err) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ message: 'All sticky notes deleted' });
+  });
+});
+
 // DELETE sticky note (protected if confession exists)
 app.delete('/api/stickynotes/:id', (req, res) => {
   const { id } = req.params;
@@ -131,16 +147,6 @@ app.delete('/api/stickynotes/:id', (req, res) => {
   });
 });
 
-// DELETE all sticky notes
-app.delete('/api/stickynotes', (req, res) => {
-  db.run('DELETE FROM stickynotes', (err) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ message: 'All sticky notes deleted' });
-  });
-});
 
 // ==================== STATS ====================
 
@@ -224,6 +230,20 @@ app.put('/api/confessions/:id', (req, res) => {
   );
 });
 
+// DELETE all confessions
+app.delete('/api/confessions/all', (req, res) => {
+  console.log('[API] DELETE /api/confessions/all called');
+  db.run('DELETE FROM confessions', function(err) {
+    if (err) {
+      console.error('[API] Error deleting all confessions:', err.message);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    console.log(`[API] Deleted rows from confessions:`, this.changes);
+    res.json({ message: 'All confessions deleted', deletedRows: this.changes });
+  });
+});
+
 // DELETE a confession
 app.delete('/api/confessions/:id', (req, res) => {
   const { id } = req.params;
@@ -234,17 +254,6 @@ app.delete('/api/confessions/:id', (req, res) => {
       return;
     }
     res.json({ message: 'Confession deleted', id: parseInt(id) });
-  });
-});
-
-// DELETE all confessions
-app.delete('/api/confessions/all', (req, res) => {
-  db.run('DELETE FROM confessions', (err) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json({ message: 'All confessions deleted' });
   });
 });
 
