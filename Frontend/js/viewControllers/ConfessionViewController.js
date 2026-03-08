@@ -88,8 +88,8 @@ class ConfessionViewController extends BaseViewController {
 
       console.log('Confession saved:', confession.id);
 
-      // Mark sticky note as submitted
-      await this.service.updateStickyNote(noteData.id, { submitted: 1 });
+      // Mark sticky note with confessionId
+      await this.service.updateStickyNote(noteData.id, { confessionId: confession.id });
 
       // Update view
       if (window.AppDelegate && window.AppDelegate.canvasViewController) {
@@ -129,3 +129,4 @@ class ConfessionViewController extends BaseViewController {
 
 // Make globally available
 window.ConfessionViewController = ConfessionViewController;
+
