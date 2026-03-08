@@ -239,8 +239,18 @@ app.delete('/api/confessions/all', (req, res) => {
       res.status(500).json({ error: err.message });
       return;
     }
-    console.log(`[API] Deleted rows from confessions:`, this.changes);
-    res.json({ message: 'All confessions deleted', deletedRows: this.changes });
+    const deletedConfessions = this.changes;
+    db.run('DELETE FROM stickynotes', function(err2) {
+      if (err2) {
+        console.error('[API] Error deleting all sticky notes:', err2.message);
+        res.status(500).json({ error: err2.message });
+        return;
+      }
+      const deletedStickyNotes = this.changes;
+      console.log(`[API] Deleted rows from confessions:`, deletedConfessions);
+      console.log(`[API] Deleted rows from stickynotes:`, deletedStickyNotes);
+      res.json({ message: 'All confessions and sticky notes deleted', deletedConfessions, deletedStickyNotes });
+    });
   });
 });
 
