@@ -96,7 +96,8 @@
       `;
 
       confessions.forEach(confession => {
-        const id = confession.id ? confession.id.substring(0, 8) : 'N/A';
+        //const id = confession.id ? confession.id.substring(0, 8) : 'N/A';
+        const id = confession.id;
         const name = confession.writerName || 'Anonymous';
         const email = confession.writerEmail || '-';
         const text = (confession.text || '').substring(0, 100);
